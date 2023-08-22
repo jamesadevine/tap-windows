@@ -488,6 +488,17 @@ pub fn device_io_control(
 ) -> io::Result<()> {
     let mut junk = 0;
 
+    println!(
+        "Win ioctl: in sz {}, out sz {}",
+        mem::size_of_val(in_buffer),
+        mem::size_of_val(out_buffer)
+    );
+
+    println!(
+        "Win ioctl: in {:?}, out {:?}",
+        in_buffer as *const _ as LPVOID, out_buffer as *mut _ as LPVOID
+    );
+
     match unsafe {
         DeviceIoControl(
             handle,

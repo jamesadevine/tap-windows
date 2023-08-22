@@ -42,10 +42,10 @@ use winapi::um::winnt::HANDLE;
 ///     .or_else(|_| -> std::io::Result<_> {
 ///         // The device does not exists...
 ///         // try creating a new one
-///         
+///
 ///         let dev = Device::create()?;
 ///         dev.set_name(MY_INTERFACE)?;
-///     
+///
 ///         Ok(dev)
 ///     })
 ///     // Everything failed, just panic
@@ -177,35 +177,66 @@ impl Device {
     }
 
     /// Retrieve the version of the driver
-    pub fn get_version(&self) -> io::Result<[u32; 3]> {
-        let mut version = [0; 3];
+    pub fn get_version(&self) -> io::Result<[u64; 3]> {
+        let in_version: [u64; 3] = [0; 3];
+        let mut out_version: [u64; 3] = [0; 3];
 
         ffi::device_io_control(
             self.handle,
             CTL_CODE(FILE_DEVICE_UNKNOWN, 2, METHOD_BUFFERED, FILE_ANY_ACCESS),
-            &(),
-            &mut version,
+            &in_version,
+            &mut out_version,
         )
-        .map(|_| version)
+        .map(|_| out_version)
     }
 
     /// Retieve the mtu of the interface
     pub fn get_mtu(&self) -> io::Result<u32> {
-        let mut mtu = 0;
+        let in_mtu: u32 = 0;
+        let mut out_mtu = 0;
 
         ffi::device_io_control(
             self.handle,
             CTL_CODE(FILE_DEVICE_UNKNOWN, 3, METHOD_BUFFERED, FILE_ANY_ACCESS),
-            &(),
-            &mut mtu,
+            &in_mtu,
+            &mut out_mtu,
         )
-        .map(|_| mtu)
+        .map(|_| out_mtu)
     }
 
     /// Retrieve the name of the interface
     pub fn get_name(&self) -> io::Result<String> {
         ffi::luid_to_alias(&self.luid).map(|name| decode_utf16(&name))
     }
+
+    // pub fn jd_test(&self) -> io::Result<[u32; 3]> {
+    //     let mut jd_test: [u32; 3] = [0; 3];
+    //     let mut junk = 0;
+
+    //     use winapi::um::ioapiset::DeviceIoControl;
+    //     match unsafe {
+    //         DeviceIoControl(
+    //             self.handle,
+    //             CTL_CODE(
+    //                 FILE_DEVICE_UNKNOWN,
+    //                 4,
+    //                 METHOD_BUFFERED,
+    //                 FILE_ANY_ACCESS,
+    //             ),
+    //             std::ptr::null() as LPVOID,
+    //             0,
+    //             &mut jd_test as *mut _ as _,
+    //             std::mem::size_of_val(&jd_test) as _,
+    //             &mut junk,
+    //             std::ptr::null_mut(),
+    //         )
+    //     } {
+    //         0 => Err(io::Error::last_os_error()),
+    //         _ => Ok(()),
+    //     };
+
+    //     Ok(jd_test)
+    // }
 
     /// Set the name of the interface
     pub fn set_name(&self, newname: &str) -> io::Result<()> {
@@ -241,12 +272,15 @@ impl Device {
     /// false for disconnected.
     pub fn set_status(&self, status: bool) -> io::Result<()> {
         let status: u32 = if status { 1 } else { 0 };
+        let mut out_status: u32 = 0;
+
+        println!("handle: {:?}", self.handle);
 
         ffi::device_io_control(
             self.handle,
             CTL_CODE(FILE_DEVICE_UNKNOWN, 6, METHOD_BUFFERED, FILE_ANY_ACCESS),
             &status,
-            &mut (),
+            &mut out_status,
         )
     }
 }
